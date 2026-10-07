@@ -1,4 +1,4 @@
-# WoW Forever Helper
+# WoW Forever Decider
 
 A small tool for choosing your race, class and side in World of Warcraft: Forever.
 

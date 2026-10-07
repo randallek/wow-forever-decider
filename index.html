@@ -3,7 +3,7 @@
 ai-assisted: true
 model: Claude Opus 5.5
 date: 2026-10-07
-WoW Forever Helper (English version of the vault tool wow-forever-tierlista.html).
+WoW Forever Decider (English version of the vault tool wow-forever-tierlista.html).
 Race/class data: WoW Forever (launch 2026-11-04). Sources: zockify.com/forever/races, vaultalts.com (Skyborne), news.blizzard.com/en-us/article/24304075
 Icons: loaded from the Wowhead CDN (wow.zamimg.com); offline, the page shows initials instead.
 -->
@@ -11,7 +11,7 @@ Icons: loaded from the Wowhead CDN (wow.zamimg.com); offline, the page shows ini
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>WoW Forever Helper</title>
+<title>WoW Forever Decider</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Alegreya+Sans:wght@400;500;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
@@ -251,7 +251,7 @@ textarea { width: 100%; min-height: 110px; font: .78rem/1.4 var(--f-mono); }
 <main class="wrap">
   <header>
     <div class="eyebrow">World of Warcraft: Forever · launches November 4, 2026 · level cap 60</div>
-    <h1>WoW Forever Helper</h1>
+    <h1>WoW Forever Decider</h1>
     <p class="lede">Rank classes and races from <b>S (5 pts)</b> to <b>D (1 pt)</b>. The tool scores every allowed race + class pair, compares Alliance with Horde and recommends a side. Drag an icon, or click it and then click a row. Keys S, A, B, C, D also work on a selected icon.</p>
   </header>
 
@@ -494,7 +494,7 @@ function defaultState() {
   };
 }
 
-const KEY = 'wow-forever-helper-v1';
+const KEY = 'wow-forever-decider-v1';
 let state = load();
 let selected = null;
 
