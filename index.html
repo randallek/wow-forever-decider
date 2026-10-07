@@ -1,0 +1,908 @@
+<!doctype html>
+<!--
+ai-assisted: true
+model: Claude Opus 5.5
+date: 2026-10-07
+WoW Forever Helper (English version of the vault tool wow-forever-tierlista.html).
+Race/class data: WoW Forever (launch 2026-11-04). Sources: zockify.com/forever/races, vaultalts.com (Skyborne), news.blizzard.com/en-us/article/24304075
+Icons: loaded from the Wowhead CDN (wow.zamimg.com); offline, the page shows initials instead.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>WoW Forever Helper</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Alegreya+Sans:wght@400;500;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: frames styled like WoW UI windows (dark stone + gold trim). Tier lists with action-bar icons → tooltip-style verdict → top list + side factors → matrix. Tiers use item quality colors. Deliberately dark-only. */
+:root {
+  --bg: #0a0908; --frame: #16120d; --frame-2: #0f0c09; --trim: #7a6331; --trim-dim: #3d321c;
+  --text: #f0e6d2; --muted: #a89c86; --gold: #ffd100; --white: #ffffff;
+  --tooltip: #0a0a1c; --tooltip-line: #5b5b6b;
+  --alliance: #3d8bff; --alliance-deep: #123a7a; --horde: #ff4a4a; --horde-deep: #6e0d0d;
+  --btn-top: #9b1313; --btn-bot: #4d0707; --btn-trim: #c7a14a;
+  --q-s: #ff8000; --q-a: #a335ee; --q-b: #0070dd; --q-c: #1eff00; --q-d: #9d9d9d;
+  --t-off: #ff8a4c; --t-def: #7fb2e5; --t-pvp: #d08cf5; --t-eco: #86d873; --t-util: #b8ad98;
+  --f-display: "Cinzel", "Friz Quadrata", "Trajan Pro", Georgia, serif;
+  --f-body: "Alegreya Sans", "Gill Sans", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  color: var(--text); font: 16px/1.5 var(--f-body);
+  background: var(--bg) radial-gradient(ellipse 120% 60% at 50% -10%, #2c2214 0%, #120e0a 45%, var(--bg) 100%) no-repeat;
+  min-height: 100vh;
+}
+.wrap { max-width: 1200px; margin: 0 auto; padding-inline: 16px; padding-block: 32px 72px; display: grid; gap: 26px; }
+h1, h2 { font-family: var(--f-display); margin: 0; text-wrap: balance; }
+h1 {
+  font-size: clamp(2rem, 5.2vw, 3.2rem); font-weight: 900; letter-spacing: .03em; line-height: 1.05;
+  color: var(--gold); text-shadow: 0 2px 0 #000, 0 0 18px rgba(255, 160, 0, .25);
+}
+h2 { font-size: 1.12rem; font-weight: 700; color: var(--gold); letter-spacing: .04em; text-shadow: 0 1px 0 #000, 0 0 6px #000; }
+.eyebrow { font: 600 .74rem var(--f-body); text-transform: uppercase; letter-spacing: .16em; color: var(--muted); }
+.lede { color: var(--muted); max-width: 70ch; margin: 10px 0 0; }
+.lede b { color: var(--text); font-weight: 500; }
+.hint { font-size: .86rem; color: var(--muted); }
+.num { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+
+/* WoW window frame */
+.panel {
+  position: relative; min-width: 0; display: grid; gap: 14px; padding: 20px;
+  background: linear-gradient(180deg, var(--frame) 0%, var(--frame-2) 100%);
+  border: 1px solid #000; border-radius: 6px;
+  box-shadow: inset 0 0 0 1px var(--trim), inset 0 0 0 3px #000, inset 0 0 0 4px var(--trim-dim), 0 8px 24px rgba(0,0,0,.7);
+}
+.head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; padding-bottom: 10px; border-bottom: 1px solid var(--trim-dim); }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr)); gap: 22px; }
+.scroll { overflow-x: auto; min-width: 0; }
+
+/* Action-bar style icon */
+.icon {
+  --s: 44px; position: relative; display: inline-grid; place-items: center; flex: none;
+  width: var(--s); height: var(--s); border-radius: 4px; overflow: hidden; background: #000;
+  box-shadow: 0 0 0 1px #000, 0 2px 4px rgba(0,0,0,.8);
+}
+.icon img { width: 100%; height: 100%; display: block; transform: scale(1.1); }
+.icon::after { content: ""; position: absolute; inset: 0; border-radius: 4px; pointer-events: none; box-shadow: inset 0 0 0 1px rgba(255,255,255,.14), inset 0 0 0 2px rgba(0,0,0,.55), inset 0 -8px 12px rgba(0,0,0,.35); }
+.icon.fb { background: linear-gradient(#2c2418, #0f0c08); color: var(--gold); font: 700 calc(var(--s) * .34) var(--f-display); }
+.icon.sm { --s: 26px; } .icon.md { --s: 32px; } .icon.lg { --s: 64px; }
+.crest { position: absolute; right: -5px; bottom: -5px; z-index: 2; }
+.crest .icon { --s: 18px; border-radius: 50%; }
+.crest .icon::after { border-radius: 50%; }
+
+/* Tier list */
+.board { display: grid; gap: 5px; }
+.tier-row { display: grid; grid-template-columns: 58px 1fr; min-height: 92px; border: 1px solid #000; border-radius: 4px; overflow: hidden; background: rgba(0,0,0,.35); box-shadow: inset 0 0 0 1px var(--trim-dim); }
+.tier-row.over .zone, .tier-row.target .zone { outline: 1px dashed var(--gold); outline-offset: -4px; background: rgba(255, 209, 0, .04); }
+.tier-label {
+  display: grid; place-items: center; align-content: center; gap: 2px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--q) 85%, #fff) 0%, var(--q) 40%, color-mix(in srgb, var(--q) 55%, #000) 100%);
+  color: var(--white); text-shadow: 0 1px 0 #000, 0 0 4px #000; border-right: 1px solid #000;
+}
+.tier-label b { font: 900 1.7rem/1 var(--f-display); }
+.tier-label small { font: 600 .66rem var(--f-mono); }
+.zone { display: flex; flex-wrap: wrap; gap: 6px 4px; padding: 8px; align-content: flex-start; cursor: pointer; min-width: 0; }
+.tile {
+  display: grid; justify-items: center; gap: 5px; width: 70px; padding: 4px 2px 2px; border: 0; border-radius: 6px;
+  background: transparent; color: var(--text); cursor: grab; user-select: none; font: inherit;
+}
+.tile:hover .icon { box-shadow: 0 0 0 1px #000, 0 0 0 2px rgba(255,209,0,.5), 0 2px 6px rgba(0,0,0,.8); }
+.tile.selected .icon { box-shadow: 0 0 0 1px #000, 0 0 0 2px var(--gold), 0 0 14px 3px rgba(255, 176, 0, .75); }
+.tile:focus-visible { outline: 1px solid var(--gold); outline-offset: 1px; }
+.tile .nm { font: 700 .74rem/1.15 var(--f-body); text-align: center; text-shadow: 0 1px 0 #000; }
+.tile .sub { display: block; font-weight: 500; font-size: .66rem; color: var(--muted); }
+
+/* WoW buttons */
+.seg { display: flex; flex-wrap: wrap; gap: 5px; }
+.seg button, .btn {
+  font: 700 .82rem var(--f-display); letter-spacing: .03em; padding: 7px 12px; border-radius: 4px; cursor: pointer;
+  color: var(--muted); background: linear-gradient(#2a2620, #15120e); border: 1px solid #000;
+  box-shadow: inset 0 0 0 1px #4a4232, 0 1px 2px rgba(0,0,0,.8); text-shadow: 0 1px 0 #000;
+}
+.seg button:hover, .btn:hover { color: var(--text); }
+.seg button[aria-pressed="true"], .btn.red {
+  color: var(--gold); background: linear-gradient(var(--btn-top), var(--btn-bot)); box-shadow: inset 0 0 0 1px var(--btn-trim), inset 0 1px 0 1px rgba(255,255,255,.12), 0 1px 2px rgba(0,0,0,.8);
+}
+.seg.tiers button { min-width: 40px; font-size: 1rem; }
+.seg.tiers button[aria-pressed="true"] { color: var(--white); background: linear-gradient(color-mix(in srgb, var(--q) 80%, #fff), var(--q) 45%, color-mix(in srgb, var(--q) 50%, #000)); box-shadow: inset 0 0 0 1px rgba(255,255,255,.3); }
+.btn.ghost { background: transparent; box-shadow: none; padding: 4px 8px; }
+button:focus-visible, select:focus-visible, input:focus-visible { outline: 1px solid var(--gold); outline-offset: 2px; }
+
+.controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); gap: 18px 26px; }
+.ctl { display: grid; gap: 7px; align-content: start; }
+.ctl > label, .ctl > .eyebrow { font: 600 .74rem var(--f-body); text-transform: uppercase; letter-spacing: .14em; color: var(--muted); }
+.ctl .num { color: var(--gold); }
+select, input[type="text"], textarea { font: inherit; color: var(--text); background: #0b0907; border: 1px solid #000; box-shadow: inset 0 0 0 1px var(--trim-dim); border-radius: 4px; padding: 6px 8px; }
+input[type="range"] { width: 100%; accent-color: var(--gold); }
+.check { display: flex; gap: 8px; align-items: center; }
+.check input { accent-color: var(--gold); width: 16px; height: 16px; }
+
+/* Tooltip-style verdict */
+.tooltip {
+  background: linear-gradient(180deg, #10102a, var(--tooltip)); border: 1px solid var(--tooltip-line); border-radius: 6px;
+  box-shadow: inset 0 0 0 1px #000, 0 8px 24px rgba(0,0,0,.7); padding: 20px; display: grid; gap: 16px; min-width: 0;
+}
+.tooltip .head { border-bottom-color: #2a2a40; }
+.verdict-line { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.verdict-line > div { min-width: 0; }
+.verdict-name { font: 900 clamp(1.8rem, 5.5vw, 2.6rem)/1.05 var(--f-display); letter-spacing: .03em; text-shadow: 0 2px 0 #000; }
+.verdict-name.A { color: var(--alliance); } .verdict-name.H { color: var(--horde); } .verdict-name.T { color: var(--muted); }
+.v-sub { color: var(--muted); }
+.v-sub b { font-weight: 700; }
+.bar { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; }
+.tug { display: flex; height: 20px; border-radius: 3px; overflow: hidden; border: 1px solid #000; box-shadow: inset 0 0 0 1px #6d6d7d; background: #000; }
+.tug span { display: block; height: 100%; transition: width .4s ease; }
+.tug .A { background: linear-gradient(#6fb0ff, #1f5fcf 50%, var(--alliance-deep)); }
+.tug .H { background: linear-gradient(#ff8080, #c51e1e 50%, var(--horde-deep)); }
+.tug-labels { display: flex; justify-content: space-between; font: 600 .9rem var(--f-mono); margin-top: 4px; padding-inline: 42px; }
+.tug-labels .A { color: var(--alliance); } .tug-labels .H { color: var(--horde); }
+table { border-collapse: collapse; width: 100%; }
+.stats th, .stats td { padding: 6px 10px; text-align: right; border-bottom: 1px solid #22223a; }
+.stats th:first-child, .stats td:first-child { text-align: left; color: var(--muted); font-weight: 500; }
+.stats thead th { font: 700 .82rem var(--f-display); letter-spacing: .05em; }
+.stats thead th.A { color: var(--alliance); } .stats thead th.H { color: var(--horde); }
+.stats td.win { color: #1eff00; font-weight: 600; }
+.stats .cur { color: var(--gold); }
+
+/* Top 10 */
+.top { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; counter-reset: r; }
+.top li { display: grid; grid-template-columns: 22px auto 1fr auto; gap: 10px; align-items: center; padding: 5px 10px 5px 6px; border-radius: 4px; background: rgba(0,0,0,.35); box-shadow: inset 0 0 0 1px var(--trim-dim); counter-increment: r; }
+.top li::before { content: counter(r); font: 700 .85rem var(--f-display); color: var(--gold); text-align: right; }
+.top .pair { display: flex; gap: 3px; }
+.top .who { min-width: 0; line-height: 1.2; }
+.top .who b { font-weight: 700; }
+.top .who small { display: block; color: var(--muted); font-size: .76rem; }
+.top .sc { font: 600 1.05rem var(--f-mono); color: var(--gold); }
+.empty { color: var(--muted); }
+
+/* Side factors */
+.factors th, .factors td { padding: 6px; text-align: left; border-bottom: 1px solid var(--trim-dim); }
+.factors thead th { font: 600 .74rem var(--f-body); text-transform: uppercase; letter-spacing: .12em; color: var(--muted); }
+.factors thead th .icon { vertical-align: middle; }
+.factors input[type="text"] { width: 100%; min-width: 0; }
+.factors td:nth-child(2), .factors td:nth-child(3) { width: 70px; }
+.factors td:last-child { width: 36px; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.row input[type="text"] { flex: 1 1 200px; }
+
+/* Matrix */
+.matrix { min-width: 860px; }
+.matrix th, .matrix td { padding: 3px; text-align: center; }
+.matrix thead th { vertical-align: bottom; padding-bottom: 8px; }
+.matrix thead th .cn { display: block; font: 700 .72rem var(--f-body); margin-top: 4px; text-shadow: 0 1px 0 #000; }
+.matrix .rh { text-align: left; padding-right: 12px; }
+.matrix .rh-in { display: flex; gap: 10px; align-items: center; }
+.matrix .rh b { font-weight: 700; white-space: nowrap; }
+.matrix .rh .rt { font: 900 .82rem var(--f-display); color: var(--q); margin-left: 5px; text-shadow: 0 1px 0 #000; }
+.matrix .rh small { display: block; color: var(--muted); font-size: .72rem; max-width: 28ch; line-height: 1.25; font-weight: 400; }
+.matrix .fh td { text-align: left; padding: 16px 0 6px; }
+.matrix .fh .fh-in { display: flex; align-items: center; gap: 8px; font: 700 .95rem var(--f-display); letter-spacing: .08em; text-shadow: 0 1px 0 #000; }
+.matrix .fh.A .fh-in { color: var(--alliance); } .matrix .fh.H .fh-in { color: var(--horde); }
+.cell {
+  position: relative; width: 100%; min-width: 60px; padding: 10px 4px; border-radius: 4px; cursor: pointer;
+  border: 1px solid #000; color: var(--text); font: 600 .95rem var(--f-mono); font-variant-numeric: tabular-nums;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--q) 38%, #15110c), color-mix(in srgb, var(--q) 16%, #0b0907));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--q) 55%, transparent); text-shadow: 0 1px 0 #000;
+}
+.cell:hover { box-shadow: inset 0 0 0 1px var(--q), 0 0 8px color-mix(in srgb, var(--q) 60%, transparent); }
+.cell.out { opacity: .3; }
+.cell.ban { background: #0d0b09; box-shadow: inset 0 0 0 1px #2a241a; color: #5e5546; text-decoration: line-through; }
+.cell.fav { box-shadow: inset 0 0 0 1px var(--gold), 0 0 10px rgba(255, 176, 0, .55); }
+.cell .mk { position: absolute; top: 1px; right: 4px; font-size: .66rem; text-decoration: none; color: var(--gold); }
+.cell.ban .mk { color: #8a7d66; }
+.cell .new { position: absolute; top: 4px; left: 4px; width: 6px; height: 6px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 4px var(--gold); }
+.na { color: #3a3226; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: .84rem; color: var(--muted); }
+.legend i { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 4px var(--gold); margin-right: 6px; vertical-align: 2px; }
+
+/* Top 2 races per class and side */
+.picks { min-width: 560px; }
+.picks th, .picks td { padding: 7px 8px; text-align: left; vertical-align: middle; border-bottom: 1px solid var(--trim-dim); }
+.picks thead th { font: 700 .86rem var(--f-display); letter-spacing: .05em; }
+.picks thead th .th-in { display: flex; align-items: center; gap: 8px; }
+.picks thead th.A { color: var(--alliance); } .picks thead th.H { color: var(--horde); }
+.picks .cls { display: flex; align-items: center; gap: 10px; font-weight: 700; white-space: nowrap; text-shadow: 0 1px 0 #000; }
+.pick-cell { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pick { position: relative; padding: 0; border: 0; background: transparent; cursor: pointer; border-radius: 4px; opacity: .35; filter: grayscale(.85); transition: opacity .15s, filter .15s; }
+.pick:hover { opacity: .75; filter: none; }
+.pick.on { opacity: 1; filter: none; }
+.pick.on .icon { box-shadow: 0 0 0 1px #000, 0 0 0 2px var(--gold), 0 0 9px rgba(255, 176, 0, .6); }
+.pick.on.auto .icon { box-shadow: 0 0 0 1px #000, 0 0 0 2px #9a9aae; }
+.pick[disabled] { cursor: default; }
+.pick .rt { position: absolute; left: -4px; bottom: -4px; z-index: 2; font: 900 .6rem/1 var(--f-display); color: var(--white); background: var(--q); border: 1px solid #000; border-radius: 2px; padding: 2px 3px; text-shadow: 0 1px 0 #000; }
+.mode { font-size: .74rem; color: var(--muted); }
+.mode button { font: 600 .74rem var(--f-body); color: var(--gold); background: none; border: 0; cursor: pointer; padding: 2px 4px; text-decoration: underline; text-underline-offset: 2px; }
+
+.rac-toggle { margin-left: auto; font: 600 .74rem var(--f-body); color: var(--gold); background: none; border: 1px solid var(--trim-dim); border-radius: 3px; padding: 2px 7px; cursor: pointer; text-shadow: none; }
+.rac-toggle[aria-expanded="true"] { background: rgba(255, 209, 0, .08); border-color: var(--trim); }
+.picks tr.expand > td { background: rgba(0,0,0,.28); padding: 12px; }
+
+/* Racials */
+.rac-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 270px), 1fr)); gap: 10px; }
+.rac-card { display: grid; gap: 8px; align-content: start; padding: 10px 12px; border-radius: 4px; min-width: 0; background: linear-gradient(180deg, #10102a, var(--tooltip)); border: 1px solid #000; box-shadow: inset 0 0 0 1px #3c3c52; }
+.rac-card > header { display: flex; align-items: center; gap: 10px; }
+.rac-card > header b { font: 700 .98rem var(--f-display); color: var(--white); }
+.rac-card > header small { display: block; font-size: .74rem; color: var(--muted); }
+.rac-card > header .rt { margin-left: auto; font: 900 .9rem var(--f-display); color: var(--q); text-shadow: 0 1px 0 #000; }
+.rac-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; }
+.rac-list li { font-size: .86rem; line-height: 1.3; }
+.rac-list .rn { font-weight: 700; color: var(--white); }
+.rac-list .kind { font: 600 .62rem var(--f-mono); color: var(--muted); margin-left: 5px; text-transform: uppercase; }
+.rac-list .rd { display: block; color: var(--gold); }
+.tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }
+.tag { font: 600 .62rem/1 var(--f-body); text-transform: uppercase; letter-spacing: .08em; color: var(--tone); border: 1px solid color-mix(in srgb, var(--tone) 55%, transparent); border-radius: 2px; padding: 3px 4px 2px; }
+.priest-line { font-size: .78rem; color: var(--muted); border-top: 1px solid #2a2a40; padding-top: 6px; }
+.priest-line b { color: #ffffff; font-weight: 700; }
+
+details summary { cursor: pointer; font: 700 1rem var(--f-display); color: var(--gold); }
+textarea { width: 100%; min-height: 110px; font: .78rem/1.4 var(--f-mono); }
+.foot { font-size: .84rem; color: var(--muted); max-width: 110ch; }
+.foot a { color: var(--gold); }
+@media (prefers-reduced-motion: reduce) { .tug span { transition: none; } }
+@media (max-width: 520px) { .tile { width: 62px; } .icon { --s: 40px; } .tier-row { grid-template-columns: 46px 1fr; } }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header>
+    <div class="eyebrow">World of Warcraft: Forever · launches November 4, 2026 · level cap 60</div>
+    <h1>WoW Forever Helper</h1>
+    <p class="lede">Rank classes and races from <b>S (5 pts)</b> to <b>D (1 pt)</b>. The tool scores every allowed race + class pair, compares Alliance with Horde and recommends a side. Drag an icon, or click it and then click a row. Keys S, A, B, C, D also work on a selected icon.</p>
+  </header>
+
+  <section class="grid2" aria-label="Tier lists">
+    <div class="panel">
+      <div class="head"><h2>Classes</h2><span class="hint">9 classes</span></div>
+      <div class="board" id="board-c"></div>
+    </div>
+    <div class="panel">
+      <div class="head">
+        <h2>Races</h2>
+        <div class="seg" id="gender" aria-label="Race icon gender"></div>
+      </div>
+      <div class="board" id="board-r"></div>
+      <span class="hint">Skyborne is rated separately for each side, because each side gets different classes and a different racial.</span>
+    </div>
+  </section>
+
+  <section class="panel" aria-label="Top 2 races per class">
+    <div class="head"><h2>Top 2 races per class on each side</h2><span class="hint">Silver frame: the 2 highest-rated races, picked automatically. Gold: your pick. Click a race to add or remove it.</span></div>
+    <div class="scroll"><table class="picks" id="picks"></table></div>
+    <div class="row"><button class="btn" type="button" id="picks-auto">Reset all to automatic picks</button></div>
+  </section>
+
+  <section class="panel" aria-label="Scoring settings">
+    <div class="head"><h2>Filter and weights</h2><span class="hint" id="combo-count"></span></div>
+    <div class="controls">
+      <div class="ctl">
+        <span class="eyebrow">Counted tiers</span>
+        <div class="seg tiers" id="f-tiers"></div>
+      </div>
+      <div class="ctl">
+        <span class="eyebrow">Tier filter applies to</span>
+        <div class="seg" id="f-on"></div>
+      </div>
+      <div class="ctl">
+        <label for="w-class">Weight class / race: <span class="num" id="w-class-out"></span></label>
+        <input type="range" id="w-class" min="0" max="100" step="10">
+      </div>
+      <div class="ctl">
+        <span class="eyebrow">Side metric</span>
+        <div class="seg" id="metric"></div>
+      </div>
+      <div class="ctl">
+        <span class="eyebrow">Races in score</span>
+        <div class="seg" id="use-picks"></div>
+      </div>
+      <div class="ctl">
+        <span class="eyebrow">Skyborne</span>
+        <label class="check"><input type="checkbox" id="sky"> I own the Skyborne pack (paid race)</label>
+      </div>
+    </div>
+  </section>
+
+  <section class="tooltip" aria-label="Recommendation" aria-live="polite">
+    <div class="head"><h2>Recommended side</h2><span class="hint" id="metric-note"></span></div>
+    <div class="verdict-line">
+      <span id="v-crest"></span>
+      <div><div class="verdict-name" id="v-name"></div><div class="v-sub" id="v-sub"></div></div>
+    </div>
+    <div>
+      <div class="bar"><span id="bar-a"></span><div class="tug" aria-hidden="true"><span class="A" id="tug-a"></span><span class="H" id="tug-h"></span></div><span id="bar-h"></span></div>
+      <div class="tug-labels"><span class="A" id="tug-a-l"></span><span class="H" id="tug-h-l"></span></div>
+    </div>
+    <div class="scroll"><table class="stats" id="stats"></table></div>
+  </section>
+
+  <section class="grid2">
+    <div class="panel">
+      <div class="head"><h2>Best combinations</h2><span class="hint">after filters, excluded ones removed</span></div>
+      <ol class="top" id="top"></ol>
+    </div>
+    <div class="panel">
+      <div class="head"><h2>Side factors</h2><span class="hint">what races and classes do not show</span></div>
+      <div class="ctl">
+        <label for="w-fac">Factor weight in verdict: <span class="num" id="w-fac-out"></span></label>
+        <input type="range" id="w-fac" min="0" max="60" step="5">
+      </div>
+      <div class="scroll"><table class="factors"><thead><tr><th>Factor</th><th id="fh-a"></th><th id="fh-h"></th><th></th></tr></thead><tbody id="factors"></tbody></table></div>
+      <form class="row" id="add-factor"><input type="text" id="new-factor" placeholder="New factor, e.g. My friend's guild" aria-label="New factor name"><button class="btn red" type="submit">Add</button></form>
+    </div>
+  </section>
+
+  <section class="panel" aria-label="Combination matrix">
+    <div class="head"><h2>Race × class matrix</h2><span class="hint">Click a cell: normal → favorite (+1) → excluded</span></div>
+    <div class="scroll"><table class="matrix" id="matrix"></table></div>
+    <div class="legend"><span><i></i>new combination in Forever</span><span>♥ favorite, +1 pt</span><span>struck through = excluded</span><span>faded = filtered out by tier or outside top 2</span></div>
+  </section>
+
+  <section class="panel" aria-label="Racials">
+    <div class="head"><h2>Racials</h2><span class="hint">Gold text: effect in Forever. Tags are a helper classification, not game data. Click “Racials” next to a class in the Top 2 panel to see only the races available for that class.</span></div>
+    <div class="rac-grid" id="racials"></div>
+  </section>
+
+  <section class="panel">
+    <details>
+      <summary>Save, load, reset</summary>
+      <p class="hint">Your setup saves automatically in this browser. To move it elsewhere or paste it into a note, copy the JSON.</p>
+      <textarea id="json" aria-label="Setup as JSON" spellcheck="false"></textarea>
+      <div class="row">
+        <button class="btn" type="button" id="copy">Copy JSON</button>
+        <button class="btn" type="button" id="load">Load from field</button>
+        <button class="btn red" type="button" id="reset">Reset everything to B</button>
+        <span class="hint" id="io-msg" role="status"></span>
+      </div>
+    </details>
+  </section>
+
+  <p class="foot">Combinations as of October 2026. New in Forever: Human Hunter, Dwarf Shaman, Gnome Priest, Orc Mage, Troll Warlock, Undead Paladin, and Skyborne. Alliance Skyborne can be Mages, Horde Skyborne can be Shamans. Both sides get Skyborne Warrior, Hunter, Rogue and Druid. Each side has 28 combinations, so point totals are comparable. Sources: <a href="https://news.blizzard.com/en-us/article/24304075/create-the-hero-you-want-to-be-in-world-of-warcraft-forever" target="_blank" rel="noopener">Blizzard</a>, <a href="https://www.zockify.com/forever/races/" target="_blank" rel="noopener">Zockify</a>, <a href="https://vaultalts.com/wow-forever/guides/skyborne-race-starting-zone-and-classes" target="_blank" rel="noopener">VaultAlts</a>. Icons: <a href="https://www.wowhead.com" target="_blank" rel="noopener">Wowhead</a>. Check for changes before beta and launch. Fan-made, not affiliated with Blizzard Entertainment.</p>
+</main>
+
+<script>
+const ICON_CDN = 'https://wow.zamimg.com/images/wow/icons/large/';
+const TIERS = [
+  { id: 'S', pts: 5, q: '--q-s' }, { id: 'A', pts: 4, q: '--q-a' }, { id: 'B', pts: 3, q: '--q-b' },
+  { id: 'C', pts: 2, q: '--q-c' }, { id: 'D', pts: 1, q: '--q-d' }
+];
+const PTS = Object.fromEntries(TIERS.map(t => [t.id, t.pts]));
+const QVAR = Object.fromEntries(TIERS.map(t => [t.id, t.q]));
+
+const CLASSES = [
+  { id: 'warrior', name: 'Warrior', color: '#C69B6D' },
+  { id: 'paladin', name: 'Paladin', color: '#F48CBA' },
+  { id: 'hunter',  name: 'Hunter',  color: '#AAD372' },
+  { id: 'rogue',   name: 'Rogue',   color: '#FFF468' },
+  { id: 'priest',  name: 'Priest',  color: '#FFFFFF' },
+  { id: 'shaman',  name: 'Shaman',  color: '#0070DD' },
+  { id: 'mage',    name: 'Mage',    color: '#3FC7EB' },
+  { id: 'warlock', name: 'Warlock', color: '#8788EE' },
+  { id: 'druid',   name: 'Druid',   color: '#FF7C0A' }
+];
+const CNAME = Object.fromEntries(CLASSES.map(c => [c.id, c]));
+
+const RACES = [
+  { id: 'human',  name: 'Human',     icon: 'human',    f: 'A', classes: ['warrior','paladin','hunter','rogue','priest','mage','warlock'], newc: ['hunter'] },
+  { id: 'dwarf',  name: 'Dwarf',     icon: 'dwarf',    f: 'A', classes: ['warrior','paladin','hunter','rogue','priest','shaman'], newc: ['shaman'] },
+  { id: 'nelf',   name: 'Night Elf', icon: 'nightelf', f: 'A', classes: ['warrior','hunter','rogue','priest','druid'], newc: [] },
+  { id: 'gnome',  name: 'Gnome',     icon: 'gnome',    f: 'A', classes: ['warrior','rogue','priest','mage','warlock'], newc: ['priest'] },
+  { id: 'skyA',   name: 'Skyborne',  icon: 'skyborne', sub: 'High Order', f: 'A', sky: true, classes: ['warrior','hunter','rogue','druid','mage'], newc: ['warrior','hunter','rogue','druid','mage'] },
+  { id: 'orc',    name: 'Orc',       icon: 'orc',      f: 'H', classes: ['warrior','hunter','rogue','shaman','mage','warlock'], newc: ['mage'] },
+  { id: 'tauren', name: 'Tauren',    icon: 'tauren',   f: 'H', classes: ['warrior','hunter','druid','shaman'], newc: [] },
+  { id: 'troll',  name: 'Troll',     icon: 'troll',    f: 'H', classes: ['warrior','hunter','rogue','priest','mage','shaman','warlock'], newc: ['warlock'] },
+  { id: 'undead', name: 'Undead',    icon: 'scourge',  f: 'H', classes: ['warrior','rogue','priest','mage','warlock','paladin'], newc: ['paladin'] },
+  { id: 'skyH',   name: 'Skyborne',  icon: 'skyborne', sub: 'Windshapers', f: 'H', sky: true, classes: ['warrior','hunter','rogue','druid','shaman'], newc: ['warrior','hunter','rogue','druid','shaman'] }
+];
+/* Racials in Forever. Effects: Zockify (all races except Skyborne), VaultAlts (Skyborne).
+   Type: A = active, P = passive. Tags are a helper classification, not game data. */
+const TAGS = {
+  burst: { label: 'Burst', tone: '--t-off' }, dmg: { label: 'Damage', tone: '--t-off' },
+  def: { label: 'Defensive', tone: '--t-def' }, pvp: { label: 'PvP', tone: '--t-pvp' },
+  regen: { label: 'Regen', tone: '--t-eco' }, res: { label: 'Resources', tone: '--t-eco' },
+  weapon: { label: 'Weapon', tone: '--t-util' }, prof: { label: 'Profession', tone: '--t-util' },
+  move: { label: 'Mobility', tone: '--t-util' }, util: { label: 'Utility', tone: '--t-util' }
+};
+const RACIALS = {
+  human: { list: [
+    { n: 'Will to Survive', t: 'A', d: 'Removes stuns.', tags: ['pvp'] },
+    { n: 'Perception', t: 'A', d: 'Detect stealthed enemies for 20 sec.', tags: ['pvp'] },
+    { n: 'Sword Specialization', t: 'P', d: 'Swords increase spell and ability critical chance by 2%.', tags: ['weapon', 'dmg'] },
+    { n: 'The Human Spirit', t: 'P', d: '5% increased Spirit.', tags: ['regen'] }
+  ], priest: ['Divine Grace', 'Feedback'] },
+  dwarf: { list: [
+    { n: 'Stoneform', t: 'A', d: 'Removes Poison and Disease effects and reduces Physical damage taken for 8 sec.', tags: ['def', 'pvp'] },
+    { n: 'Find Treasure', t: 'A', d: 'Track nearby treasure chests.', tags: ['util'] },
+    { n: 'Mace Specialization', t: 'P', d: 'Maces increase spell and ability critical chance by 1%.', tags: ['weapon', 'dmg'] },
+    { n: 'Big Game Hunter', t: 'P', d: 'Damage to Beasts increased by 5%.', tags: ['dmg'] }
+  ], priest: ['Chastise', 'Desperate Prayer'] },
+  nelf: { list: [
+    { n: "Elune's Light", t: 'A', d: 'Increases critical chance by 10% for 15 sec.', tags: ['burst'] },
+    { n: 'Shadowmeld', t: 'A', d: 'Gain Stealth while immobile.', tags: ['pvp', 'util'] },
+    { n: 'Quickness', t: 'P', d: '1% increased Dodge chance and 2% increased run speed.', tags: ['def', 'move'] },
+    { n: 'Wisp Spirit', t: 'P', d: '75% increased run speed while dead.', tags: ['util'] }
+  ], priest: ["Elune's Grace", 'Starshards'] },
+  gnome: { list: [
+    { n: 'Escape Artist', t: 'A', d: 'Brief immunity to Roots and Snares.', tags: ['pvp', 'move'] },
+    { n: 'Eureka!', t: 'A', d: 'Reduced cost and 10% increased damage or healing on your next 3 spells or abilities.', tags: ['burst', 'res'] },
+    { n: 'Expansive Mind', t: 'P', d: 'Maximum Mana, Rage, or Energy increased by 5%.', tags: ['res'] },
+    { n: 'Engineering Specialization', t: 'P', d: 'More reliable engineering devices.', tags: ['prof'] }
+  ], priest: ['Confounding Flash', 'Contingency Plan'] },
+  skyA: { list: [
+    { n: 'Walk on Air', t: 'A', d: 'Glide through the air for 10 sec.', tags: ['move'] },
+    { n: 'Read Ley Line', t: 'A', d: 'Doubles health and mana regeneration.', tags: ['regen'] },
+    { n: 'Wind Blessed', t: 'P', d: '1% increased haste.', tags: ['dmg'] },
+    { n: 'Elemental Insight', t: 'P', d: 'Damage to Elementals increased by 5%.', tags: ['dmg'] }
+  ] },
+  orc: { list: [
+    { n: 'Blood Fury', t: 'A', d: 'Increases Attack Power and Spell Power by 10% for 15 sec.', tags: ['burst'] },
+    { n: 'Shatter Curse', t: 'A', d: 'Immunity to Curses and Banes and reduced Magical damage taken for 8 sec.', tags: ['def', 'pvp'] },
+    { n: 'Axe Specialization', t: 'P', d: 'Axes increase spell and ability critical chance by 1%.', tags: ['weapon', 'dmg'] },
+    { n: 'Hardiness', t: 'P', d: 'Stun durations decreased by 20%.', tags: ['pvp'] }
+  ] },
+  tauren: { list: [
+    { n: 'War Stomp', t: 'A', d: 'Stuns nearby enemies for 2 sec.', tags: ['pvp', 'def'] },
+    { n: 'Cultivation', t: 'A', d: 'Grow bonus herbs that don\'t require Herbalism to gather.', tags: ['prof'] },
+    { n: 'Plainsrunning', t: 'P', d: 'Movement speed increases the longer you keep moving.', tags: ['move'] },
+    { n: 'Endurance', t: 'P', d: 'Total Health increased by 5% and Hit chance increased by 1%.', tags: ['def', 'dmg'] }
+  ] },
+  troll: { list: [
+    { n: 'Berserking', t: 'A', d: 'Increases casting and attack speed by 10% for 10 sec.', tags: ['burst'] },
+    { n: 'Rapid Regeneration', t: 'A', d: 'Regenerates 50% of maximum Health over time.', tags: ['regen', 'def'] },
+    { n: 'Beast Slaying', t: 'P', d: 'Damage to Beasts increased by 5%.', tags: ['dmg'] },
+    { n: 'Regeneration', t: 'P', d: '10% of Health regeneration continues during combat.', tags: ['regen'] }
+  ], priest: ['Shadowguard'] },
+  undead: { list: [
+    { n: 'Will of the Forsaken', t: 'A', d: 'Removes Charm, Fear, and Sleep.', tags: ['pvp'] },
+    { n: 'Cannibalize', t: 'A', d: 'Consume corpses to regenerate 35% Health and Mana over time.', tags: ['regen'] },
+    { n: 'Underwater Breathing', t: 'P', d: 'Breathe 300% longer underwater.', tags: ['util'] },
+    { n: 'Touch of the Grave', t: 'P', d: 'Your attacks sometimes drain health.', tags: ['dmg', 'regen'] }
+  ], priest: ['Dark Sacrifice'] },
+  skyH: { list: [
+    { n: 'Walk on Air', t: 'A', d: 'Glide through the air for 10 sec.', tags: ['move'] },
+    { n: 'Skysight', t: 'A', d: '10% increased run speed.', tags: ['move'] },
+    { n: 'Wind Blessed', t: 'P', d: '1% increased haste.', tags: ['dmg'] },
+    { n: 'Elemental Insight', t: 'P', d: 'Damage to Elementals increased by 5%.', tags: ['dmg'] }
+  ] }
+};
+RACES.forEach(r => { r.racials = RACIALS[r.id].list.map(x => x.n).join(', '); });
+
+const FNAME = { A: 'Alliance', H: 'Horde' };
+const FICON = { A: 'ui_allianceicon', H: 'ui_hordeicon' };
+
+const DEFAULT_FACTORS = [
+  'Friends and guild',
+  'Population and balance (BG queues, auction house)',
+  'Atmosphere, capitals, aesthetics',
+  'Leveling zones and quests',
+  'World PvP and battlegrounds'
+];
+
+function defaultState() {
+  const tiers = {};
+  CLASSES.forEach(c => tiers['c:' + c.id] = 'B');
+  RACES.forEach(r => tiers['r:' + r.id] = 'B');
+  return {
+    tiers, mods: {},
+    filter: ['S','A','B','C','D'], filterOn: 'both',
+    wClass: 50, metric: 'sum', skyborne: true, gender: 'male',
+    usePicks: true, picks: {},
+    factors: DEFAULT_FACTORS.map(name => ({ name, A: 'B', H: 'B' })), wFac: 25
+  };
+}
+
+const KEY = 'wow-forever-helper-v1';
+let state = load();
+let selected = null;
+
+function load() {
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (raw) return sanitize(JSON.parse(raw));
+  } catch (e) {}
+  return defaultState();
+}
+function sanitize(s) {
+  const d = defaultState();
+  const out = Object.assign(d, s || {});
+  out.tiers = Object.assign(defaultState().tiers, (s && s.tiers) || {});
+  if (!Array.isArray(out.filter)) out.filter = d.filter;
+  if (!Array.isArray(out.factors)) out.factors = defaultState().factors;
+  if (!out.mods || typeof out.mods !== 'object') out.mods = {};
+  if (out.gender !== 'female') out.gender = 'male';
+  if (!out.picks || typeof out.picks !== 'object') out.picks = {};
+  out.usePicks = out.usePicks !== false;
+  return out;
+}
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+  document.getElementById('json').value = JSON.stringify(state, null, 1);
+}
+
+const $ = id => document.getElementById(id);
+const el = (tag, attrs = {}, ...kids) => {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === 'style') n.style.cssText = v;
+    else if (k.startsWith('on')) n.addEventListener(k.slice(2), v);
+    else if (v !== false && v != null) n.setAttribute(k, v);
+  }
+  kids.flat().forEach(k => k != null && n.append(k));
+  return n;
+};
+const raceLabel = r => r.sub ? `${r.name} (${r.sub})` : r.name;
+
+/* Icon: image from the CDN, initials if it fails to load */
+function icon(name, size, fallback) {
+  const box = el('span', { class: 'icon' + (size ? ' ' + size : ''), 'aria-hidden': 'true' });
+  const img = el('img', { src: ICON_CDN + name + '.jpg', alt: '', loading: 'lazy', draggable: 'false' });
+  img.addEventListener('error', () => { img.remove(); box.classList.add('fb'); box.textContent = fallback; });
+  box.append(img);
+  return box;
+}
+const classIcon = (cid, size) => icon('classicon_' + cid, size, CNAME[cid].name.slice(0, 2));
+const raceIcon = (r, size) => icon(`race_${r.icon}_${state.gender}`, size, r.name.slice(0, 2));
+const factionIcon = (f, size) => icon(FICON[f], size, f);
+function raceIconWithCrest(r, size) {
+  const ic = raceIcon(r, size);
+  const wrap = el('span', { style: 'position:relative;display:inline-grid' }, ic, el('span', { class: 'crest' }, factionIcon(r.f)));
+  return wrap;
+}
+
+/* ---------- Tier lists ---------- */
+function tileFor(key) {
+  const [kind, id] = key.split(':');
+  let pic, label, title;
+  if (kind === 'c') {
+    const c = CNAME[id];
+    pic = classIcon(id);
+    label = el('span', { class: 'nm', style: `color:${c.color}` }, c.name);
+    title = c.name;
+  } else {
+    const r = RACES.find(x => x.id === id);
+    pic = raceIconWithCrest(r);
+    label = el('span', { class: 'nm' }, r.name, r.sub ? el('span', { class: 'sub' }, FNAME[r.f]) : null);
+    title = `${raceLabel(r)} · ${FNAME[r.f]} · ${r.racials}`;
+  }
+  return el('button', {
+    type: 'button', class: 'tile' + (selected === key ? ' selected' : ''), draggable: 'true',
+    'data-key': key, title, 'aria-pressed': selected === key ? 'true' : 'false',
+    ondragstart: e => { e.dataTransfer.setData('text/plain', key); e.dataTransfer.effectAllowed = 'move'; },
+    onclick: e => { e.stopPropagation(); selected = selected === key ? null : key; renderBoards(); refocus(key); },
+    onkeydown: e => {
+      const t = e.key.toUpperCase();
+      if (PTS[t]) { e.preventDefault(); selected = null; setTier(key, t); refocus(key); }
+      else if (e.key === 'Escape') { selected = null; renderBoards(); refocus(key); }
+    }
+  }, pic, label);
+}
+function refocus(key) { const n = document.querySelector(`[data-key="${key}"]`); if (n) n.focus(); }
+
+function renderBoard(container, kind) {
+  container.innerHTML = '';
+  const keys = (kind === 'c' ? CLASSES.map(c => 'c:' + c.id) : RACES.filter(r => state.skyborne || !r.sky).map(r => 'r:' + r.id));
+  TIERS.forEach(t => {
+    const zone = el('div', { class: 'zone' }, keys.filter(k => state.tiers[k] === t.id).map(tileFor));
+    const row = el('div', {
+      class: 'tier-row' + (selected && selected.startsWith(kind + ':') ? ' target' : ''),
+      style: `--q: var(${t.q})`,
+      ondragover: e => { e.preventDefault(); row.classList.add('over'); },
+      ondragleave: () => row.classList.remove('over'),
+      ondrop: e => {
+        e.preventDefault(); row.classList.remove('over');
+        const key = e.dataTransfer.getData('text/plain');
+        if (key && key.startsWith(kind + ':')) setTier(key, t.id);
+      },
+      onclick: () => { if (selected && selected.startsWith(kind + ':')) { const k = selected; selected = null; setTier(k, t.id); } }
+    }, el('div', { class: 'tier-label' }, el('b', {}, t.id), el('small', {}, t.pts + (t.pts === 1 ? ' pt' : ' pts'))), zone);
+    container.append(row);
+  });
+}
+function renderBoards() { renderBoard($('board-c'), 'c'); renderBoard($('board-r'), 'r'); }
+function setTier(key, tier) { state.tiers[key] = tier; update(); }
+
+/* ---------- Scoring ---------- */
+function passes(cid, rid) {
+  const ct = state.tiers['c:' + cid], rt = state.tiers['r:' + rid];
+  const f = state.filter;
+  if (state.filterOn === 'class') return f.includes(ct);
+  if (state.filterOn === 'race') return f.includes(rt);
+  return f.includes(ct) && f.includes(rt);
+}
+/* Races available for a class on a side, and the chosen top 2 (manual, or automatic by race tier) */
+function available(cid, f) {
+  return RACES.filter(r => r.f === f && (!r.sky || state.skyborne) && r.classes.includes(cid));
+}
+function effectivePicks(cid, f) {
+  const avail = available(cid, f), ids = avail.map(r => r.id);
+  const manual = state.picks[f + '|' + cid];
+  if (Array.isArray(manual)) return { ids: manual.filter(id => ids.includes(id)).slice(0, 2), manual: true, avail };
+  const auto = avail.slice().sort((a, b) => PTS[state.tiers['r:' + b.id]] - PTS[state.tiers['r:' + a.id]]).slice(0, 2).map(r => r.id);
+  return { ids: auto, manual: false, avail };
+}
+function compute() {
+  const w = state.wClass / 100, list = [], pickCache = {};
+  const picked = (cid, f) => (pickCache[f + cid] ||= effectivePicks(cid, f).ids);
+  RACES.forEach(r => {
+    if (r.sky && !state.skyborne) return;
+    r.classes.forEach(cid => {
+      const ct = state.tiers['c:' + cid], rt = state.tiers['r:' + r.id];
+      const mod = state.mods[r.id + '|' + cid] || null;
+      let s = 2 * (w * PTS[ct] + (1 - w) * PTS[rt]);
+      if (mod === 'fav') s += 1;
+      const isPicked = picked(cid, r.f).includes(r.id);
+      const pass = passes(cid, r.id) && mod !== 'ban' && (!state.usePicks || isPicked);
+      list.push({ r, cid, ct, rt, s: Math.round(s * 10) / 10, mod, pass, isPicked, isNew: r.newc.includes(cid) });
+    });
+  });
+  return list;
+}
+function factionStats(list, f) {
+  const xs = list.filter(x => x.pass && x.r.f === f).sort((a, b) => b.s - a.s);
+  const sum = xs.reduce((a, x) => a + x.s, 0);
+  const top3 = xs.slice(0, 3);
+  const fac = state.factors.reduce((a, x) => a + PTS[x[f]], 0);
+  return {
+    count: xs.length, sum, best: xs[0] ? xs[0].s : 0, bestCombo: xs[0] || null,
+    top3: top3.length ? top3.reduce((a, x) => a + x.s, 0) / top3.length : 0,
+    avg: xs.length ? sum / xs.length : 0, fac
+  };
+}
+const share = (a, h) => (a + h) > 0 ? a / (a + h) : 0.5;
+const fmt = n => (Math.round(n * 10) / 10).toLocaleString('en-US', { minimumFractionDigits: n % 1 ? 1 : 0, maximumFractionDigits: 1 });
+
+/* ---------- Verdict ---------- */
+const METRICS = [
+  { id: 'sum', label: 'Total', note: 'Sum of points of all combinations that pass the filters. Rewards the side with more good options.' },
+  { id: 'top3', label: 'Top 3', note: 'Average of the side\'s three best combinations. Good if you plan one main and two alts.' },
+  { id: 'best', label: 'Best', note: 'Only the side\'s single best combination. For players who stick to one character.' }
+];
+function renderVerdict(list) {
+  const A = factionStats(list, 'A'), H = factionStats(list, 'H');
+  const m = state.metric;
+  const fw = state.wFac / 100;
+  const final = (1 - fw) * share(A[m], H[m]) + fw * share(A.fac, H.fac);
+  const pa = Math.round(final * 100), ph = 100 - pa;
+  const name = $('v-name'), sub = $('v-sub'), crest = $('v-crest');
+  crest.innerHTML = ''; sub.innerHTML = '';
+  if (A.count + H.count === 0) {
+    name.textContent = 'No combinations'; name.className = 'verdict-name T';
+    sub.textContent = 'The tier filter removed everything. Select more tiers.';
+  } else if (Math.abs(pa - ph) <= 2) {
+    name.textContent = 'Tie'; name.className = 'verdict-name T';
+    sub.textContent = 'The gap is within 2 points. Let side factors or your friends decide.';
+  } else {
+    const f = pa > ph ? 'A' : 'H';
+    crest.append(factionIcon(f, 'lg'));
+    name.textContent = FNAME[f]; name.className = 'verdict-name ' + f;
+    const b = (f === 'A' ? A : H).bestCombo;
+    if (b) sub.append('Strongest pick: ', el('b', { style: `color:${CNAME[b.cid].color}` }, `${raceLabel(b.r)} ${CNAME[b.cid].name}`), ` (${fmt(b.s)} pts)`);
+  }
+  const ba = $('bar-a'), bh = $('bar-h');
+  if (!ba.firstChild) { ba.append(factionIcon('A', 'md')); bh.append(factionIcon('H', 'md')); }
+  $('tug-a').style.width = pa + '%'; $('tug-h').style.width = ph + '%';
+  $('tug-a-l').textContent = `Alliance ${pa}%`; $('tug-h-l').textContent = `${ph}% Horde`;
+  $('metric-note').textContent = METRICS.find(x => x.id === m).note;
+
+  const rows = [
+    ['Combinations after filters', A.count, H.count, 'count'],
+    ['Total points', A.sum, H.sum, 'sum'],
+    ['Best combination', A.best, H.best, 'best'],
+    ['Top 3 average', A.top3, H.top3, 'top3'],
+    ['Average combination', A.avg, H.avg, 'avg'],
+    ['Side factors', A.fac, H.fac, 'fac']
+  ];
+  const t = $('stats'); t.innerHTML = '';
+  t.append(el('thead', {}, el('tr', {}, el('th', {}, 'Measure'), el('th', { class: 'A' }, 'Alliance'), el('th', { class: 'H' }, 'Horde'))));
+  t.append(el('tbody', {}, rows.map(([lab, a, h, id]) => el('tr', {},
+    el('td', { class: id === m ? 'cur' : '' }, lab + (id === m ? ' ◂ metric' : '')),
+    el('td', { class: 'num' + (a > h ? ' win' : '') }, fmt(a)),
+    el('td', { class: 'num' + (h > a ? ' win' : '') }, fmt(h))
+  ))));
+}
+
+/* ---------- Top 10 ---------- */
+function renderTop(list) {
+  const ol = $('top'); ol.innerHTML = '';
+  const xs = list.filter(x => x.pass).sort((a, b) => b.s - a.s || a.r.name.localeCompare(b.r.name)).slice(0, 10);
+  if (!xs.length) { ol.append(el('li', { class: 'empty', style: 'display:block' }, 'No combination passes the filters.')); return; }
+  xs.forEach(x => ol.append(el('li', {},
+    el('span', { class: 'pair' }, raceIconWithCrest(x.r, 'md'), classIcon(x.cid, 'md')),
+    el('span', { class: 'who' },
+      el('b', { style: `color:${CNAME[x.cid].color}` }, `${x.r.name} ${CNAME[x.cid].name}${x.mod === 'fav' ? ' ♥' : ''}`),
+      el('small', {}, `${FNAME[x.r.f]} · class ${x.ct} · race ${x.rt}${x.isNew ? ' · new' : ''}`)),
+    el('span', { class: 'sc num' }, fmt(x.s))
+  )));
+}
+
+/* ---------- Matrix ---------- */
+function qFor(s) { return s >= 9 ? '--q-s' : s >= 7.5 ? '--q-a' : s >= 6 ? '--q-b' : s >= 4.5 ? '--q-c' : '--q-d'; }
+function cycleMod(rid, cid) {
+  const k = rid + '|' + cid, cur = state.mods[k];
+  if (!cur) state.mods[k] = 'fav'; else if (cur === 'fav') state.mods[k] = 'ban'; else delete state.mods[k];
+  update();
+  const n = document.querySelector(`[data-cell="${k}"]`); if (n) n.focus();
+}
+function renderMatrix(list) {
+  const t = $('matrix'); t.innerHTML = '';
+  const by = Object.fromEntries(list.map(x => [x.r.id + '|' + x.cid, x]));
+  t.append(el('thead', {}, el('tr', {}, el('th', {}, ''), CLASSES.map(c => el('th', {}, classIcon(c.id, 'md'), el('span', { class: 'cn', style: `color:${c.color}` }, c.name))))));
+  const tb = el('tbody');
+  ['A', 'H'].forEach(f => {
+    tb.append(el('tr', { class: 'fh ' + f }, el('td', { colspan: CLASSES.length + 1 }, el('div', { class: 'fh-in' }, factionIcon(f, 'sm'), FNAME[f]))));
+    RACES.filter(r => r.f === f && (!r.sky || state.skyborne)).forEach(r => {
+      const rt = state.tiers['r:' + r.id];
+      tb.append(el('tr', {},
+        el('th', { class: 'rh', style: `--q: var(${QVAR[rt]})` }, el('div', { class: 'rh-in' }, raceIcon(r, 'md'),
+          el('div', {}, el('b', {}, raceLabel(r)), el('span', { class: 'rt' }, rt), el('small', {}, r.racials)))),
+        CLASSES.map(c => {
+          const x = by[r.id + '|' + c.id];
+          if (!x) return el('td', {}, el('span', { class: 'na', 'aria-label': 'unavailable' }, '·'));
+          const cls = 'cell' + (x.mod === 'ban' ? ' ban' : !x.pass ? ' out' : '') + (x.mod === 'fav' ? ' fav' : '');
+          const stateTxt = x.mod === 'fav' ? 'favorite' : x.mod === 'ban' ? 'excluded' : 'normal';
+          return el('td', {}, el('button', {
+            type: 'button', class: cls, style: `--q: var(${qFor(x.s)})`, 'data-cell': r.id + '|' + c.id,
+            title: `${raceLabel(r)} ${c.name}: ${fmt(x.s)} pts (class ${x.ct}, race ${x.rt}) · ${stateTxt}${x.isNew ? ' · new in Forever' : ''}`,
+            onclick: () => cycleMod(r.id, c.id)
+          }, x.isNew ? el('span', { class: 'new' }) : null, fmt(x.s), x.mod === 'fav' ? el('span', { class: 'mk' }, '♥') : x.mod === 'ban' ? el('span', { class: 'mk' }, '✕') : null));
+        })
+      ));
+    });
+  });
+  t.append(tb);
+}
+
+/* ---------- Top 2 races ---------- */
+function togglePick(cid, f, rid) {
+  const cur = effectivePicks(cid, f).ids.slice();
+  const i = cur.indexOf(rid);
+  if (i >= 0) cur.splice(i, 1); else { cur.push(rid); if (cur.length > 2) cur.shift(); }
+  state.picks[f + '|' + cid] = cur;
+  update();
+  const n = document.querySelector(`[data-pick="${f}|${cid}|${rid}"]`); if (n) n.focus();
+}
+/* Racials card; with a class in context, Priest racial spells show only for Priest */
+function racialCard(r, cid) {
+  const data = RACIALS[r.id], rt = state.tiers['r:' + r.id];
+  const showPriest = data.priest && (!cid || cid === 'priest');
+  return el('article', { class: 'rac-card', style: `--q: var(${QVAR[rt]})` },
+    el('header', {}, raceIconWithCrest(r, 'md'),
+      el('div', {}, el('b', {}, r.name), el('small', {}, r.sub ? `${r.sub} · ${FNAME[r.f]}` : FNAME[r.f])),
+      el('span', { class: 'rt', title: 'Your tier for this race' }, rt)),
+    el('ul', { class: 'rac-list' }, data.list.map(x => el('li', {},
+      el('span', { class: 'rn' }, x.n), el('span', { class: 'kind' }, x.t === 'A' ? 'active' : 'passive'),
+      el('span', { class: 'rd' }, x.d),
+      el('span', { class: 'tags' }, x.tags.map(tg => el('span', { class: 'tag', style: `--tone: var(${TAGS[tg].tone})` }, TAGS[tg].label)))
+    ))),
+    showPriest ? el('div', { class: 'priest-line' }, 'Priest racial spells: ', el('b', {}, data.priest.join(', '))) : null
+  );
+}
+function renderRacials() {
+  const g = $('racials'); g.innerHTML = '';
+  RACES.filter(r => !r.sky || state.skyborne).forEach(r => g.append(racialCard(r)));
+}
+const openRac = new Set();
+
+function renderPicks() {
+  const t = $('picks'); t.innerHTML = '';
+  t.append(el('thead', {}, el('tr', {}, el('th', {}, 'Class'),
+    ['A', 'H'].map(f => el('th', { class: f }, el('div', { class: 'th-in' }, factionIcon(f, 'sm'), FNAME[f]))))));
+  const tb = el('tbody');
+  CLASSES.forEach(c => {
+    tb.append(el('tr', {},
+      el('td', {}, el('div', { class: 'cls', style: `color:${c.color}` }, classIcon(c.id, 'md'), c.name,
+        el('button', { type: 'button', class: 'rac-toggle', id: 'rac-' + c.id, 'aria-expanded': openRac.has(c.id) ? 'true' : 'false',
+          onclick: () => { openRac.has(c.id) ? openRac.delete(c.id) : openRac.add(c.id); renderPicks(); $('rac-' + c.id).focus(); }
+        }, openRac.has(c.id) ? 'Racials ▴' : 'Racials ▾'))),
+      ['A', 'H'].map(f => {
+        const p = effectivePicks(c.id, f), key = f + '|' + c.id;
+        if (!p.avail.length) return el('td', {}, el('span', { class: 'mode' }, 'unavailable'));
+        const only = p.avail.length === 1;
+        return el('td', {}, el('div', { class: 'pick-cell' },
+          p.avail.map(r => {
+            const on = p.ids.includes(r.id), rt = state.tiers['r:' + r.id];
+            return el('button', {
+              type: 'button', class: 'pick' + (on ? ' on' : '') + (on && !p.manual ? ' auto' : ''),
+              'data-pick': `${f}|${c.id}|${r.id}`, 'aria-pressed': on ? 'true' : 'false', disabled: only ? 'disabled' : false,
+              title: `${raceLabel(r)} ${c.name} · race tier ${rt}${only ? ' · the only race for this class on this side' : on ? ' · in top 2' : ''}`,
+              style: `--q: var(${QVAR[rt]})`,
+              onclick: () => togglePick(c.id, f, r.id)
+            }, raceIcon(r, 'md'), el('span', { class: 'rt' }, rt));
+          }),
+          only ? el('span', { class: 'mode' }, 'only option')
+            : p.manual ? el('span', { class: 'mode' }, 'manual ', el('button', { type: 'button', onclick: () => { delete state.picks[key]; update(); } }, 'auto'))
+            : el('span', { class: 'mode' }, 'auto')
+        ));
+      })
+    ));
+    if (openRac.has(c.id)) {
+      const races = [...available(c.id, 'A'), ...available(c.id, 'H')];
+      tb.append(el('tr', { class: 'expand' }, el('td', { colspan: 3 },
+        el('div', { class: 'rac-grid' }, races.map(r => racialCard(r, c.id))))));
+    }
+  });
+  t.append(tb);
+}
+$('picks-auto').addEventListener('click', () => { state.picks = {}; update(); });
+
+/* ---------- Side factors ---------- */
+function tierSelect(value, onchange, label) {
+  return el('select', { 'aria-label': label, onchange: e => onchange(e.target.value) }, TIERS.map(t => el('option', { value: t.id, selected: t.id === value ? 'selected' : false }, t.id)));
+}
+function renderFactors() {
+  const tb = $('factors'); tb.innerHTML = '';
+  state.factors.forEach((fa, i) => tb.append(el('tr', {},
+    el('td', {}, el('input', { type: 'text', value: fa.name, id: 'fac-name-' + i, 'aria-label': 'Factor name', oninput: e => { fa.name = e.target.value; save(); } })),
+    el('td', {}, tierSelect(fa.A, v => { fa.A = v; update(); }, `${fa.name}: Alliance rating`)),
+    el('td', {}, tierSelect(fa.H, v => { fa.H = v; update(); }, `${fa.name}: Horde rating`)),
+    el('td', {}, el('button', { type: 'button', class: 'btn ghost', title: 'Remove factor', 'aria-label': `Remove factor ${fa.name}`, onclick: () => { state.factors.splice(i, 1); renderFactors(); update(); } }, '✕'))
+  )));
+}
+
+/* ---------- Controls ---------- */
+function segButtons(container, items, isOn, onPick) {
+  container.innerHTML = '';
+  items.forEach(([id, lab, style]) => container.append(el('button', {
+    type: 'button', style: style || false, 'aria-pressed': isOn(id) ? 'true' : 'false', onclick: () => { onPick(id); renderControls(); update(); }
+  }, lab)));
+}
+function renderControls() {
+  segButtons($('f-tiers'), TIERS.map(t => [t.id, t.id, `--q: var(${t.q})`]), id => state.filter.includes(id),
+    id => { state.filter = state.filter.includes(id) ? state.filter.filter(x => x !== id) : [...state.filter, id]; });
+  segButtons($('f-on'), [['both', 'Class and race'], ['class', 'Class only'], ['race', 'Race only']], id => state.filterOn === id, id => { state.filterOn = id; });
+  segButtons($('metric'), METRICS.map(m => [m.id, m.label]), id => state.metric === id, id => { state.metric = id; });
+  segButtons($('use-picks'), [['top2', 'Top 2 per class'], ['all', 'All']], id => (id === 'top2') === state.usePicks, id => { state.usePicks = id === 'top2'; });
+  segButtons($('gender'), [['male', '♂'], ['female', '♀']], id => state.gender === id, id => { state.gender = id; });
+  $('w-class').value = state.wClass;
+  $('w-class-out').textContent = `${state.wClass} / ${100 - state.wClass}`;
+  $('w-fac').value = state.wFac;
+  $('w-fac-out').textContent = state.wFac + '%';
+  $('sky').checked = state.skyborne;
+}
+$('fh-a').append(factionIcon('A', 'sm')); $('fh-a').title = 'Alliance';
+$('fh-h').append(factionIcon('H', 'sm')); $('fh-h').title = 'Horde';
+$('w-class').addEventListener('input', e => { state.wClass = +e.target.value; $('w-class-out').textContent = `${state.wClass} / ${100 - state.wClass}`; update(); });
+$('w-fac').addEventListener('input', e => { state.wFac = +e.target.value; $('w-fac-out').textContent = state.wFac + '%'; update(); });
+$('sky').addEventListener('change', e => { state.skyborne = e.target.checked; update(); });
+$('add-factor').addEventListener('submit', e => {
+  e.preventDefault();
+  const v = $('new-factor').value.trim(); if (!v) return;
+  state.factors.push({ name: v, A: 'B', H: 'B' }); $('new-factor').value = '';
+  renderFactors(); update();
+});
+document.addEventListener('click', e => {
+  if (selected && !e.target.closest('.board')) { selected = null; renderBoards(); }
+});
+
+/* ---------- Save ---------- */
+const msg = t => { $('io-msg').textContent = t; setTimeout(() => { if ($('io-msg').textContent === t) $('io-msg').textContent = ''; }, 2500); };
+$('copy').addEventListener('click', () => {
+  const ta = $('json');
+  navigator.clipboard.writeText(ta.value).then(() => msg('Copied.'), () => { ta.select(); msg('Selected. Copy it with your keyboard shortcut.'); });
+});
+$('load').addEventListener('click', () => {
+  try { state = sanitize(JSON.parse($('json').value)); renderControls(); renderFactors(); update(); msg('Loaded.'); }
+  catch (e) { msg('That is not valid JSON. Paste the whole block copied with “Copy JSON”.'); }
+});
+let resetArmed = false;
+$('reset').addEventListener('click', e => {
+  if (!resetArmed) { resetArmed = true; e.target.textContent = 'Click again to confirm'; setTimeout(() => { resetArmed = false; e.target.textContent = 'Reset everything to B'; }, 3000); return; }
+  resetArmed = false; e.target.textContent = 'Reset everything to B';
+  state = defaultState(); selected = null; renderControls(); renderFactors(); update(); msg('Reset done.');
+});
+
+/* ---------- Main loop ---------- */
+function update() {
+  const list = compute();
+  renderBoards(); renderPicks(); renderVerdict(list); renderTop(list); renderMatrix(list); renderRacials();
+  const ok = list.filter(x => x.pass).length;
+  $('combo-count').textContent = `${ok} of ${list.length} combinations count toward the score`;
+  save();
+}
+renderControls(); renderFactors(); update();
+</script>
+</body>
+</html>
