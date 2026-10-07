@@ -7,6 +7,6 @@ A small tool for choosing your race, class and side in World of Warcraft: Foreve
 - Alliance vs Horde score, tier filters, weights and side factors.
 - Racials with their effects.
 
-Live page: https://randallek.github.io/wow-forever-tierlista/
+Live page: https://randallek.github.io/wow-forever-decider/
 
 Race and class data as of October 2026 (sources are linked in the page footer). Icons load from Wowhead, © Blizzard Entertainment. Fan-made, not affiliated with Blizzard.
